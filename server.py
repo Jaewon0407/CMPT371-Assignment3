@@ -31,6 +31,46 @@ def client_thread(conn: socket.socket, addr, root: str):
                 files = safe_list_files(root)
                 send_json(conn, {"type": "OK", "request_id": request_id, "files": files})
 
+            elif req_type == "GET":
+                # GET code here
+                # get filename
+                filename = req.get("name")
+                path = os.path.join(root, name)
+    
+                # check if exists 
+                if not os.path.isfile(path):
+                    send_json(conn, {"type": "ERROR", "request_id": request_id, "message": "File not found!"})
+                
+                # --> calculate size 
+                filesize = os.path.getsize(path)
+                
+                # --> calculate SHA256
+                calHash = hashlib.sha256()
+                with open (path, "rb") as f:
+                    while True:
+                        # read file in chunks
+                        ch = f.read(65536)
+                        if not ch:
+                            break
+                        calHash.update(ch)
+                
+                # send ok + size + SHA256 (client knows what to expect)
+                send_json(conn, {
+                    "type": "OK",
+                    "request_id": request_id,
+                    "size": filesize,
+                    "sha256": calHash.hexdigest()
+                })
+                
+                # send file bytes
+                with open (path, "rb") as f:
+                    while True:
+                        # read file in chunks
+                        ch = f.read(65536)
+                        if not ch:
+                            break
+                        conn.sendall(ch)
+
             elif req_type == "BYE":
                 send_json(conn, {"type": "OK", "request_id": request_id})
                 break
