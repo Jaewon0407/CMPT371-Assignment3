@@ -1,4 +1,5 @@
 import socket
+import os
 import uuid
 from protocol import send_json, recv_json
 import hashlib
@@ -25,7 +26,8 @@ def main():
         # read all the bits in the file
         downloaded_sha = hashlib.sha256()
         
-        with open ("downloaded_test.txt", "wb") as f:
+        downloaded_filepath = os.path.join("downloads", "test1.txt")
+        with open (downloaded_filepath, "wb") as f:
             total = filesize
             while total > 0:
                 ch = sock.recv(min(65536, total))

@@ -32,45 +32,49 @@ def client_thread(conn: socket.socket, addr, root: str):
                 send_json(conn, {"type": "OK", "request_id": request_id, "files": files})
 
             elif req_type == "GET":
-                # GET code here
-                # get filename
-                filename = req.get("name")
-                path = os.path.join(root, name)
+                try:
+                    # GET code here
+                    # get filename
+                    filename = req.get("name")
+                    path = os.path.join(root, filename)
     
-                # check if exists 
-                if not os.path.isfile(path):
-                    send_json(conn, {"type": "ERROR", "request_id": request_id, "message": "File not found!"})
+                    # check if exists 
+                    if not os.path.isfile(path):
+                        send_json(conn, {"type": "ERROR", "request_id": request_id, "message": "File not found!"})
+                        continue
+                    
+                    # --> calculate size 
+                    filesize = os.path.getsize(path)
                 
-                # --> calculate size 
-                filesize = os.path.getsize(path)
+                    # --> calculate SHA256
+                    calHash = hashlib.sha256()
+                    with open (path, "rb") as f:
+                        while True:
+                            # read file in chunks
+                            ch = f.read(65536)
+                            if not ch:
+                                break
+                            calHash.update(ch)
+                    
+                    # send ok + size + SHA256 (client knows what to expect)
+                    send_json(conn, {
+                        "type": "OK",
+                        "request_id": request_id,
+                        "size": filesize,
+                        "sha256": calHash.hexdigest()
+                    })
                 
-                # --> calculate SHA256
-                calHash = hashlib.sha256()
-                with open (path, "rb") as f:
-                    while True:
-                        # read file in chunks
-                        ch = f.read(65536)
-                        if not ch:
-                            break
-                        calHash.update(ch)
-                
-                # send ok + size + SHA256 (client knows what to expect)
-                send_json(conn, {
-                    "type": "OK",
-                    "request_id": request_id,
-                    "size": filesize,
-                    "sha256": calHash.hexdigest()
-                })
-                
-                # send file bytes
-                with open (path, "rb") as f:
-                    while True:
-                        # read file in chunks
-                        ch = f.read(65536)
-                        if not ch:
-                            break
-                        conn.sendall(ch)
-
+                    # send file bytes
+                    with open (path, "rb") as f:
+                        while True:
+                            # read file in chunks
+                            ch = f.read(65536)
+                            if not ch:
+                                break
+                            conn.sendall(ch)
+                except Exception as e:
+                    print("Error during GET request: ", e)
+                    
             elif req_type == "BYE":
                 send_json(conn, {"type": "OK", "request_id": request_id})
                 break
@@ -84,7 +88,7 @@ def client_thread(conn: socket.socket, addr, root: str):
     except Exception as e:
         # In the real assignment you can log this to console.
         # Don't crash the whole server because one client misbehaved.
-        pass
+        print("Client error: ", e)
     finally:
         try:
             conn.close()
@@ -104,6 +108,9 @@ def main():
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind((args.host, args.port))
     srv.listen()
+    
+    # print server info to console ensuring server connected
+    print(f"Server listening on {args.host}:{args.port}")
 
     while True:
         conn, addr = srv.accept()
