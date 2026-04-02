@@ -35,12 +35,7 @@ class FileTransferSystemGUI:
         self.progress_frame()
         # self.log_frame()
         
-        # disable all buttons until connected
-        self.refresh_btn.config(state='disabled')
-        self.upload_btn.config(state='disabled')
-        self.download_btn.config(state='disabled')
-        self.send_file_to_client_btn.config(state='disabled')
-        self.disconnect_btn.config(state='disabled')
+        self.fn_btns_state_change('disabled')
         
         self.root.mainloop()
         
@@ -67,11 +62,11 @@ class FileTransferSystemGUI:
         self.entry_port.pack(side='left', padx=5, pady=5)
         
         ## connect button
-        self.connect_btn = tk.Button(conn_frame, text='Connect', font=('Arial', 18), command=self.fn_connect)
+        self.connect_btn = tk.Button(conn_frame, text='Connect', command=self.fn_connect)
         self.connect_btn.pack(side='left', padx=5, pady=5)
         
         # diconnect button
-        self.disconnect_btn = tk.Button(conn_frame, text='Disconnect', font=('Arial', 18), command=self.fn_disconnect)
+        self.disconnect_btn = tk.Button(conn_frame, text='Disconnect', command=self.fn_disconnect)
         self.disconnect_btn.pack(side='left', padx=5, pady=5)
         
         conn_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
@@ -171,16 +166,73 @@ class FileTransferSystemGUI:
         
 ## ------------------------ LOG FRAME -----------------------------
 
-        
+     
+## ----------------------------------------------------------------
+## ----------------------------------------------------------------
+## =================== BUTTON FUNCTIONALITIES =====================
+
+## ------------------- Connect to server --------------------------
     def fn_connect(self):
+        host = self.entry_host.get()
+        port = int(self.entry_port.get())
         
-        print('')
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((host, port))
+            
+            messagebox.showinfo("Connection Status", "Connected to server successfully!")
+            
+            # Enable disabled buttons
+            self.fn_btns_state_change("normal")
+            
+            
+        except Exception as e:
+            messagebox.showerror("Connection Error") 
+        
     
-    
+## ------------------- Disconnect from server --------------------------
+   
     def fn_disconnect(self):
-        print('')
+        if messagebox.askyesno("Disconnect from Server", "Do you want to disconnect"):
+            # notify server
+            try:
+                if self.sock:
+                    request_id = str(uuid.uuid4())
+                    send_json(self.sock, {'type': 'BYE', 'request_id': request_id})
+                    
+                    response = recv_json(self.sock)
+                    
+                    self.sock.close()
+                    self.sock = None
+                    
+            except Exception as e:
+                messagebox.showerror("Error", "Error diconnecting from server")
+                    
+            self.root.destroy()
            
     def fn_refresh(self):
+        # if not connected, show error and re-connect
+        if not self.sock:
+            messagebox.showerror("Error", "Not connected to server, re-connect")
+            self.fn_btns_state_change('disabled')
+            return
+        
+        # if connected
+        try:
+            # send LIST request
+            request_id = str(uuid.uuid4())
+            send_json(self.sock, {"type": "LIST", "request_id": request_id})
+            
+            resp = recv_json(self.sock)
+            
+            if(resp.get("type") == 'OK'):
+                # clear files listbox and insert in listbox
+                ## ------------ TO-DO -----------------
+                print('')
+
+        except Exception as e:
+            messagebox.showerror("Error", "Could not refresh connected clients and files in server!")
+            
         print('')
         
     def fn_upload_file(self):
@@ -193,7 +245,22 @@ class FileTransferSystemGUI:
         print('')
         
 
-    # disable buttons until connected    
+    # disable/ enable buttons until connected
+    def fn_btns_state_change(self, st):
+        # disable all buttons until connected
+        self.refresh_btn.config(state=st)
+        self.upload_btn.config(state=st)
+        self.download_btn.config(state=st)
+        self.send_file_to_client_btn.config(state=st)
+        self.disconnect_btn.config(state=st)
+        
+        connect_btn_state = ""
+        if st == 'disabled':
+            connect_btn_state = 'normal'
+        else:
+            connect_btn_state = 'disabled'
+        self.connect_btn.config(state = connect_btn_state)
+            
     
     
 FileTransferSystemGUI()     
