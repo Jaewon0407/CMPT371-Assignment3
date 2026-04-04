@@ -113,6 +113,15 @@ def client_thread(conn, addr, shared_root, clients_root):
                     files = safe_list_files(shared_root)
                     send_json(conn, {"type": "OK", "request_id": request_id, "files": files})
 
+                # list clients
+                elif req_type == "LIST_CLIENTS":
+                    lst = []
+                    for client in os.listdir(clients_root):
+                        if os.path.isdir(os.path.join(clients_root, client)):
+                            lst.append(client)
+                            
+                    send_json(conn, {"type": "OK", "request_id": request_id, "clients": lst})
+
                 elif req_type == "LIST_CLIENT":
                     target_id = _sanitize_client_id(req.get("client_id"))
                     target_root = _client_root(clients_root, target_id)

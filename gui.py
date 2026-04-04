@@ -11,6 +11,7 @@ import threading
 import queue
 
 from protocol import send_json, recv_exact, recv_json
+from server import CHUNK_SIZE
 
 class FileTransferSystemGUI:
     
@@ -46,18 +47,18 @@ class FileTransferSystemGUI:
         conn_frame = tk.Frame(self.root)
         
         ## host
-        self.lbl_host = tk.Label(conn_frame, text='Host:', font=('Arial', 16))
+        self.lbl_host = tk.Label(conn_frame, text='Host:')
         self.lbl_host.pack(side='left', padx=5, pady=5)
         
-        self.entry_host = tk.Entry(conn_frame, font=('Arial', 16))
+        self.entry_host = tk.Entry(conn_frame)
         self.entry_host.insert('0', '127.0.0.1')
         self.entry_host.pack(side='left', padx=5, pady=5)
         
         ## port
-        self.lbl_port = tk.Label(conn_frame, text='Port:', font=('Arial', 16))
+        self.lbl_port = tk.Label(conn_frame, text='Port:')
         self.lbl_port.pack(side='left', padx=5, pady=5)
         
-        self.entry_port = tk.Entry(conn_frame, font=('Arial', 16))
+        self.entry_port = tk.Entry(conn_frame)
         self.entry_port.insert(0, '5001')
         self.entry_port.pack(side='left', padx=5, pady=5)
         
@@ -177,13 +178,27 @@ class FileTransferSystemGUI:
         port = int(self.entry_port.get())
         
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((host, port))
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((host, port))
+            
+            # send HELLO message
+            request_id = str(uuid.uuid4())
+            client_id = str(uuid.uuid4())
+            send_json(self.sock, {"type": "HELLO", "request_id": request_id, "client_id": client_id})
+            resp = recv_json(self.sock)
+            
+            if resp.get("type") != "OK":
+                print(resp)
+                messagebox.showerror("Connection Error", "HELO failed") 
+                return
             
             messagebox.showinfo("Connection Status", "Connected to server successfully!")
             
             # Enable disabled buttons
             self.fn_btns_state_change("normal")
+            
+            ## refresh files and clients listbox
+            self.fn_refresh()
             
             
         except Exception as e:
@@ -205,11 +220,20 @@ class FileTransferSystemGUI:
                     self.sock.close()
                     self.sock = None
                     
+                    self.fn_btns_state_change('disabled')
+                    self.files_listBox.delete(0, tk.END)
+                    self.clients_listBox.delete(0, tk.END)
+                    self.progress_bar["value"] = 0
+                    messagebox.showinfo("Disconnected from server")
+                    
             except Exception as e:
                 messagebox.showerror("Error", "Error diconnecting from server")
                     
-            self.root.destroy()
-           
+            #self.root.destroy()
+
+## ------------------- Refresh files and clients list --------------------------
+## ------------------- TO-DO: refresh client lists
+          
     def fn_refresh(self):
         # if not connected, show error and re-connect
         if not self.sock:
@@ -226,22 +250,176 @@ class FileTransferSystemGUI:
             resp = recv_json(self.sock)
             
             if(resp.get("type") == 'OK'):
+                resp_files = resp.get("files")
+                
                 # clear files listbox and insert in listbox
-                ## ------------ TO-DO -----------------
-                print('')
-
+                self.files_listBox.delete(0, tk.END)
+                
+                # insert files in files listbox
+                for file in resp_files:
+                    self.files_listBox.insert(tk.END, file["name"] + " " + str(file["size"]) + " bytes")
+            
+            else:
+                messagebox.showerror("Error", "Failed to refresh files list")
+            # -------------------------------------------------------------
+            
+            # refresh client list
+            send_json(self.sock, {"type": "LIST_CLIENTS", "request_id": str(uuid.uuid4())})
+            resp = recv_json(self.sock)
+            
+            if(resp.get("type") == 'OK'):
+                resp_clients = resp.get("clients")
+                
+                # clear files listbox and insert in listbox
+                self.clients_listBox.delete(0, tk.END)
+                
+                # insert files in files listbox
+                for client in resp_clients:
+                    self.clients_listBox.insert(tk.END, client)
+            
+            else:
+                messagebox.showerror("Error", "Failed to refresh clients list")
+            ####### =============================
+            
         except Exception as e:
             messagebox.showerror("Error", "Could not refresh connected clients and files in server!")
             
-        print('')
+## ------------------- Upload file to server --------------------------       
         
     def fn_upload_file(self):
-        print('')
+        if not self.sock:
+            messagebox.showerror("Error", "Not connected to server, re-connect")
+            self.fn_connect()
+            return
+        
+        # if no error, choose file
+        chosen_file = filedialog.askopenfilename()
+        
+        # if no chosen file, return
+        if not chosen_file:
+            return
+        
+        try:
+            name = os.path.basename(chosen_file)
+            size = os.path.getsize(chosen_file)
+            
+            # compute sha
+            h = hashlib.sha256()
+            with open(chosen_file, "rb") as f:
+                while True:
+                    ch = f.read(CHUNK_SIZE)
+                    if not ch:
+                        break
+                    h.update(ch)
+            h_hex = h.hexdigest()
+            
+            # send PUT request
+            request_id = str(uuid.uuid4())
+            
+            send_json(self.sock, {"type": "PUT", "request_id": request_id, "name": name, "size": size, "sha256": h_hex})
+            resp = recv_json(self.sock)
+            
+            if resp.get("type") != "OK":
+                messagebox.showerror("Error", "Failed to upload file")
+                return
+            
+            
+            with open(chosen_file, "rb") as f:
+                sent = 0
+                while sent < size:
+                    ch = f.read(CHUNK_SIZE)
+                    if not ch:
+                        break
+                    self.sock.sendall(ch)
+                    sent += len(ch)
+                    
+                    self.progress_bar["value"] = (sent/ size) * 100
+                    self.root.update_idletasks()
+                    
+            resp = recv_json(self.sock)
+            self.progress_bar["value"] = 0       
+            
+            if resp.get("type") == "OK":
+                messagebox.showinfo("File upload successful")
+                self.fn_refresh()
+            else:
+                messagebox.showerror("Error", "Failed to upload file")
+            
+            
+            # upload file
+            
+        except Exception as e:
+            messagebox.showerror("Error", "Failed to upload file" + str(e))
+
+## ------------------- Download file from server --------------------------
         
     def fn_download_file(self):
-        print('')
+        if not self.sock:
+            messagebox.showerror("Error", "Not connected to server, re-connect")
+            self.fn_connect()
+            return
         
+        selected_file = self.files_listBox.curselection()
+        if not selected_file:
+            messagebox.showerror("Error", "No file selected")
+            return
+        
+        # 0-based index
+        #print(self.files_listBox.get(selected_file[0]))
+        selected_filename = self.files_listBox.get(selected_file[0]).rsplit(" ", 2)[0]
+         
+        ##
+        try:
+            send_json(self.sock, {"type": "GET", "request_id": str(uuid.uuid4()), "name": selected_filename})
+            resp = recv_json(self.sock)
+            if(resp["type"] == "OK"):
+                filesize = resp["size"]
+                sha_expected = resp["sha256"]
+                
+                # read all the bits in the file
+                downloaded_sha = hashlib.sha256()
+                
+                os.makedirs("downloads", exist_ok=True)
+                
+                downloaded_filepath = os.path.join("downloads", selected_filename)
+                with open (downloaded_filepath, "wb") as f:
+                    total = filesize
+                    while total > 0:
+                        ch = self.sock.recv(min(65536, total))
+                        if not ch:
+                            break
+                        total -= len(ch)
+                        f.write(ch)
+                        downloaded_sha.update(ch)
+                        
+                        # update progress bar
+                        self.progress_bar["value"] = ((filesize - total)/ filesize) * 100
+                        self.root.update_idletasks()
+                
+                # reset progress bar
+                self.progress_bar["value"] = 0       
+                # compare sha, if equal - transfer succesful
+                if(sha_expected == downloaded_sha.hexdigest()):
+                    messagebox.showinfo("File download successfully completed")
+                else:
+                    messagebox.showerror("Error", "Failed to download the file")
+            else:
+                messagebox.showerror("Server error: ", resp.get("message")) # server error  
+                 
+        except Exception as e:
+            messagebox.showerror("Error", "Failed to download the file")
+            return    
+       
+
+## ------------------- Send file to client --------------------------
+      
     def fn_send_client_file(self):
+        if not self.sock:
+            messagebox.showerror("Error", "Not connected to server, re-connect")
+            self.fn_connect()
+            return
+        
+        
         print('')
         
 
@@ -262,6 +440,7 @@ class FileTransferSystemGUI:
         self.connect_btn.config(state = connect_btn_state)
             
     
-    
+# max file size ?
+# show all clients (not active ones only)  
 FileTransferSystemGUI()     
              
