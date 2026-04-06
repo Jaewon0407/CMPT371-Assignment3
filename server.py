@@ -8,7 +8,8 @@ from protocol import send_json, recv_json
 import hashlib
 
 CHUNK_SIZE = 65536
-
+active_clients = set()
+lock = threading.Lock()
 
 def _sanitize_filename(name):
     if not isinstance(name, str) or not name:
@@ -86,6 +87,24 @@ def safe_list_files(root):
     files.sort(key=lambda x: x["name"].lower())
     return files
 
+def _add_active_client(client_id):
+    with lock:
+        if client_id in active_clients:
+            return False
+        
+        # add client
+        active_clients.add(client_id)
+        return True
+
+def _remove_active_client(client_id):
+    if not client_id:
+        return
+    
+    # lock and remove client id
+    with lock:
+        active_clients.discard(client_id)
+    print("")
+    
 def client_thread(conn, addr, shared_root, clients_root):
     conn_client_id = None
     try:
@@ -101,6 +120,15 @@ def client_thread(conn, addr, shared_root, clients_root):
             try:
                 if req_type == "HELLO":
                     client_id = _sanitize_client_id(req.get("client_id"))
+                    
+                    if not _add_active_client(client_id):
+                        send_json(conn, {
+                            "type": "ERROR",
+                            "request_id": request_id,
+                            "message": "Client ID - " + client_id + " already in use",
+                        })
+                        continue
+                    
                     conn_client_id = client_id
                     os.makedirs(_client_root(clients_root, client_id), exist_ok=True)
                     send_json(conn, {
@@ -253,6 +281,7 @@ def client_thread(conn, addr, shared_root, clients_root):
         # Don't crash the whole server because one client misbehaved.
         print("Client error: ", e)
     finally:
+        _remove_active_client(conn_client_id)
         try:
             conn.close()
         except Exception:

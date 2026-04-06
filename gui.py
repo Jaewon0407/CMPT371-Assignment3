@@ -46,7 +46,7 @@ class FileTransferSystemGUI:
     def connection_frame(self):
         conn_frame = tk.Frame(self.root)
 
-        self.lbl_host = tk.Label(conn_frame, text="Host:", font=("Arial", 16))
+        self.lbl_host = tk.Label(conn_frame, text="Host:", font=("", 16))
         self.lbl_host.pack(side="left", padx=5, pady=5)
         self.entry_host = tk.Entry(conn_frame, font=("Arial", 16))
         self.entry_host.insert(0, "127.0.0.1")
