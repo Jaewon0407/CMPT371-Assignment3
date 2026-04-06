@@ -35,7 +35,6 @@ class FileTransferSystemGUI:
         self.connection_frame()
         self.files_frame()
         self.client_frame()
-        self.progress_frame()
 
         self.fn_btns_state_change("disabled")
         self.root.protocol("WM_DELETE_WINDOW", self.fn_close_window)
@@ -144,19 +143,6 @@ class FileTransferSystemGUI:
 
         frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
 
-    ## ------------------------ PROGRESS FRAME -----------------------------
-
-    def progress_frame(self):
-        frame = tk.Frame(self.root)
-
-        lbl_progress = tk.Label(frame, text="Progress", font=("Arial", 16))
-        lbl_progress.pack(padx=10, pady=10)
-
-        self.progress_bar = ttk.Progressbar(frame, length=600, maximum=100)
-        self.progress_bar.pack(padx=5, pady=5)
-
-        frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
-
     ## ========================= Helpers ==============================
 
     def _new_request_id(self):
@@ -167,17 +153,6 @@ class FileTransferSystemGUI:
 
     def _local_download_dir(self):
         return self._local_db_dir()
-
-    def _reset_progress(self):
-        self.progress_bar["value"] = 0
-        self.root.update_idletasks()
-
-    def _set_progress(self, sent_or_read, total):
-        if total <= 0:
-            self.progress_bar["value"] = 0
-        else:
-            self.progress_bar["value"] = (sent_or_read / total) * 100
-        self.root.update_idletasks()
 
     def _compute_sha_and_size(self, path):
         h = hashlib.sha256()
@@ -205,7 +180,7 @@ class FileTransferSystemGUI:
                 h.update(ch)
                 downloaded += len(ch)
                 remaining -= len(ch)
-                self._set_progress(downloaded, total_bytes)
+                
 
         return h.hexdigest()
 
@@ -218,7 +193,7 @@ class FileTransferSystemGUI:
                     break
                 self.sock.sendall(ch)
                 sent += len(ch)
-                self._set_progress(sent, total_bytes)
+                
 
     def _start_sync_loop(self):
         self._stop_sync_loop()
@@ -295,7 +270,6 @@ class FileTransferSystemGUI:
                 if os.path.exists(tmp_path):
                     os.remove(tmp_path)
 
-        self._reset_progress()
         if new_downloads > 0:
             messagebox.showinfo(
                 "Incoming Files",
@@ -385,7 +359,6 @@ class FileTransferSystemGUI:
             self.fn_btns_state_change("disabled")
             self.files_listBox.delete(0, tk.END)
             self.clients_listBox.delete(0, tk.END)
-            self._reset_progress()
 
             if show_message:
                 messagebox.showinfo("Disconnected", "Disconnected from server")
@@ -465,7 +438,6 @@ class FileTransferSystemGUI:
 
             self._send_file_from_path(chosen_file, size)
             final_resp = recv_json(self.sock)
-            self._reset_progress()
 
             if final_resp.get("type") == "OK":
                 messagebox.showinfo("Upload", "File upload successful")
@@ -474,7 +446,6 @@ class FileTransferSystemGUI:
                 messagebox.showerror("Error", final_resp.get("message", "Failed to upload file"))
         except Exception as e:
             messagebox.showerror("Error", f"Failed to upload file: {e}")
-            self._reset_progress()
 
     ## ------------------- Download file from server --------------------------
 
@@ -515,7 +486,6 @@ class FileTransferSystemGUI:
             tmp_path = downloaded_filepath + ".part"
 
             sha_actual = self._recv_file_to_path(tmp_path, filesize)
-            self._reset_progress()
 
             if sha_expected != sha_actual:
                 os.remove(tmp_path)
@@ -526,7 +496,6 @@ class FileTransferSystemGUI:
             messagebox.showinfo("Download", f"File saved to {downloaded_filepath}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to download file: {e}")
-            self._reset_progress()
 
     ## ------------------- Send file to client --------------------------
 
@@ -590,7 +559,6 @@ class FileTransferSystemGUI:
 
             self._send_file_from_path(chosen_file, size)
             final_resp = recv_json(self.sock)
-            self._reset_progress()
 
             if final_resp.get("type") != "OK":
                 messagebox.showerror("Error", final_resp.get("message", "Failed to send file to client"))
@@ -603,7 +571,6 @@ class FileTransferSystemGUI:
             self.fn_refresh(show_popup=False)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to send file to client: {e}")
-            self._reset_progress()
 
     # disable/enable buttons until connected
     def fn_btns_state_change(self, st):
