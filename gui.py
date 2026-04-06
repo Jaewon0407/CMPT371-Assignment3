@@ -48,19 +48,19 @@ class FileTransferSystemGUI:
 
         self.lbl_host = tk.Label(conn_frame, text="Host:", font=("", 16))
         self.lbl_host.pack(side="left", padx=5, pady=5)
-        self.entry_host = tk.Entry(conn_frame, font=("Arial", 16))
+        self.entry_host = tk.Entry(conn_frame, font=("", 14))
         self.entry_host.insert(0, "127.0.0.1")
         self.entry_host.pack(side="left", padx=5, pady=5)
 
-        self.lbl_port = tk.Label(conn_frame, text="Port:", font=("Arial", 16))
+        self.lbl_port = tk.Label(conn_frame, text="Port:", font=("", 16))
         self.lbl_port.pack(side="left", padx=5, pady=5)
-        self.entry_port = tk.Entry(conn_frame, font=("Arial", 16))
+        self.entry_port = tk.Entry(conn_frame, font=("", 14))
         self.entry_port.insert(0, "5001")
         self.entry_port.pack(side="left", padx=5, pady=5)
 
-        self.lbl_client_id = tk.Label(conn_frame, text="Client ID:", font=("Arial", 16))
+        self.lbl_client_id = tk.Label(conn_frame, text="Client ID:", font=("", 16))
         self.lbl_client_id.pack(side="left", padx=5, pady=5)
-        self.entry_client_id = tk.Entry(conn_frame, font=("Arial", 16))
+        self.entry_client_id = tk.Entry(conn_frame, font=("", 14))
         self.entry_client_id.insert(0, "ClientA")
         self.entry_client_id.pack(side="left", padx=5, pady=5)
 
@@ -80,7 +80,7 @@ class FileTransferSystemGUI:
         file_frame.grid_rowconfigure(1, weight=0)
         file_frame.grid_columnconfigure(0, weight=1)
 
-        lbl_serverFiles = tk.Label(file_frame, text="Files", font=("Arial", 16))
+        lbl_serverFiles = tk.Label(file_frame, text="Files", font=("", 16))
         lbl_serverFiles.grid(row=0, column=0, columnspan=2, pady=5)
 
         child_frame = tk.Frame(file_frame)
@@ -121,7 +121,7 @@ class FileTransferSystemGUI:
         frame.grid_rowconfigure(1, weight=0)
         frame.grid_columnconfigure(0, weight=1)
 
-        lbl_connected_clients = tk.Label(frame, text="Connected Clients", font=("Arial", 14))
+        lbl_connected_clients = tk.Label(frame, text="Peer Clients", font=("", 16))
         lbl_connected_clients.grid(row=0, column=0, pady=5)
 
         child_frame = tk.Frame(frame)
@@ -422,6 +422,7 @@ class FileTransferSystemGUI:
                 return
 
             self.clients = sorted(resp.get("clients", []), key=lambda x: x.lower())
+            
             self.clients_listBox.delete(0, tk.END)
             for client in self.clients:
                 self.clients_listBox.insert(tk.END, client)

@@ -145,7 +145,7 @@ def client_thread(conn, addr, shared_root, clients_root):
                 elif req_type == "LIST_CLIENTS":
                     lst = []
                     for client in os.listdir(clients_root):
-                        if os.path.isdir(os.path.join(clients_root, client)):
+                        if os.path.isdir(os.path.join(clients_root, client)) and conn_client_id != client:
                             lst.append(client)
                             
                     send_json(conn, {"type": "OK", "request_id": request_id, "clients": lst})
