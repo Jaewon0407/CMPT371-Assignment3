@@ -10,6 +10,7 @@
 This project implements a functional TCP client-server application in Python: a **file transfer system** with a **Tkinter GUI client**. Multiple clients can connect to a central server, download/upload files to the shared server folder and also send files to other clients.
 
 The server is responsible for:
+
 - Handling multiple clients concurrently (thread-per-client)
 - Validating requests and filenames
 - Enforcing an **overwrite-rejected** policy (server refuses uploads if the filename already exists)
@@ -67,7 +68,7 @@ Tested on Python 3.11.5
    ```
 
    If `python3` is not found on your machine, use `python` instead (depends on OS setup).
-   
+
    If the Tkinter import fails on Linux (common on fresh installs), install:
 
    ```bash
@@ -111,19 +112,23 @@ Tested on Python 3.11.5
 #### Shared folder upload/download demo
 
 From either client:
+
 1. Click **Refresh** to update the shared file list.
 2. Click **Upload** and choose a local file. (If the filename already exists on the server, the server rejects the upload.)
 3. On the other client, click **Refresh**, select the uploaded file, then click **Download**.
 
 #### Send a file to another client
+
 1. Ensure both clients have connected at least once.
 2. In the sender GUI, select the destination client in **Connected Clients**.
 3. Click **Send File** and choose a file from the sender’s local folder `client_db/<SenderID>/`.
 
 The receiver automatically syncs its inbox every few seconds and saves incoming files to:
-- `client_db/<ReceiverID>/` 
+
+- `client_db/<ReceiverID>/`
 
 #### Terminate Cleanly
+
 Click **Disconnect** in the GUI(s), then close the window(s). Stop the server with `Ctrl+C` in its terminal.
 
 ### 6) Technical Protocol Details (Length-Prefixed JSON over TCP)
@@ -131,35 +136,42 @@ Click **Disconnect** in the GUI(s), then close the window(s). Stop the server wi
 All communication uses TCP. We separate:
 
 #### Control messages (JSON frames)
+
 - Format: `LEN(4 bytes, big-endian)` + `LEN bytes of UTF-8 JSON`
 - Each request includes:
   - `type`: request name (string)
   - `request_id`: unique string (UUID) so the client can match responses
 
 The server replies with JSON frames:
+
 - `{"type":"OK", ...}` on success
 - `{"type":"ERROR", "message": "..."}` on failure
 
 #### File bytes
+
 After the server and client agree on a `size` (in bytes), the sender streams exactly `size` raw bytes. The receiver reads until it has received exactly `size` bytes.
 
 #### Supported request types
 
 Handshake:
+
 - `HELLO {client_id}` → `OK {client_id}` or `ERROR`
 
 Shared folder operations:
+
 - `LIST` → `OK {files:[{name,size}, ...]}`
 - `GET {name}` → `OK {size, sha256}` then file bytes
 - `PUT {name, size, sha256}` → `OK` then file bytes then final `OK` / `ERROR`
 
 Client inbox operations:
+
 - `LIST_CLIENTS` → `OK {clients:[...]} `
 - `LIST_CLIENT {client_id}` → `OK {files:[...]} `
 - `GET_CLIENT {client_id, name}` → `OK {size, sha256}` then file bytes
 - `PUT_CLIENT {client_id, name, size, sha256}` → `OK` then file bytes then final `OK` / `ERROR`
 
 Termination:
+
 - `BYE` → `OK` then close
 
 ### 7) Repository Layout
@@ -173,7 +185,7 @@ Termination:
 
 ### 8) Video Demo
 
-Video link:
+Video link: [Demo](https://youtu.be/4ZmmmvnXteA)
 
 The demo video includes:
 
@@ -186,12 +198,15 @@ The demo video includes:
 ### 9) Implementation Summary
 
 ### Code origin
+
 - All application code was written by our group. ChatGPT was used to create the interface/frontend.
 
 ### GenAI usage (if applicable)
+
 - ChatGPT was used to assist in writing and polishing `README.md`
 - GitHub Copilot was used for planning the workflow of the project.
 
 ### References
+
 - Python documentation: sockets, threading, and Tkinter
 - Python Socket Programming HOWTO (conceptual reference)

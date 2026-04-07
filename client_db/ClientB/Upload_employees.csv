@@ -1,0 +1,13 @@
+id,name,department,salary,experience_years,city
+1,Alice,Engineering,85000,3,Vancouver
+2,Bob,Marketing,60000,2,Surrey
+3,Charlie,Finance,72000,4,Burnaby
+4,David,Engineering,95000,5,Richmond
+5,Eva,HR,58000,2,Delta
+6,Frank,Marketing,62000,3,Vancouver
+7,Grace,Finance,78000,4,Surrey
+8,Helen,Engineering,88000,3,Burnaby
+9,Ian,HR,54000,1,Richmond
+10,Jack,Engineering,99000,6,Vancouver
+11,Karen,Marketing,65000,3,Delta
+12,Liam,Finance,81000,5,Surrey
