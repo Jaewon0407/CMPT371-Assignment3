@@ -14,6 +14,7 @@ SYNC_INTERVAL_MS = 3000
 
 class FileTransferSystemGUI:
     def __init__(self):
+        
         self.root = tk.Tk()
         self.root.title("File Transfer System")
         self.root.geometry("800x600")
@@ -43,23 +44,23 @@ class FileTransferSystemGUI:
     ## ------------------------ CONNECTION FRAME -----------------------------
 
     def connection_frame(self):
-        conn_frame = tk.Frame(self.root)
+        conn_frame = tk.Frame(self.root, bd=2, relief="groove")
 
-        self.lbl_host = tk.Label(conn_frame, text="Host:", font=("", 16))
+        self.lbl_host = tk.Label(conn_frame, text="Host:", font=("", 14, "bold"))
         self.lbl_host.pack(side="left", padx=5, pady=5)
-        self.entry_host = tk.Entry(conn_frame, font=("", 14))
+        self.entry_host = tk.Entry(conn_frame, font=("", 14), width=10)
         self.entry_host.insert(0, "127.0.0.1")
         self.entry_host.pack(side="left", padx=5, pady=5)
 
-        self.lbl_port = tk.Label(conn_frame, text="Port:", font=("", 16))
+        self.lbl_port = tk.Label(conn_frame, text="Port:", font=("", 14, "bold"))
         self.lbl_port.pack(side="left", padx=5, pady=5)
-        self.entry_port = tk.Entry(conn_frame, font=("", 14))
+        self.entry_port = tk.Entry(conn_frame, font=("", 14), width=10)
         self.entry_port.insert(0, "5001")
         self.entry_port.pack(side="left", padx=5, pady=5)
 
-        self.lbl_client_id = tk.Label(conn_frame, text="Client ID:", font=("", 16))
+        self.lbl_client_id = tk.Label(conn_frame, text="Client ID:", font=("", 14, "bold"))
         self.lbl_client_id.pack(side="left", padx=5, pady=5)
-        self.entry_client_id = tk.Entry(conn_frame, font=("", 14))
+        self.entry_client_id = tk.Entry(conn_frame, font=("", 14), width=10)
         self.entry_client_id.insert(0, "ClientA")
         self.entry_client_id.pack(side="left", padx=5, pady=5)
 
@@ -74,22 +75,22 @@ class FileTransferSystemGUI:
     ## ------------------------ SERVER FILES FRAME -----------------------------
 
     def files_frame(self):
-        file_frame = tk.Frame(self.root)
+        file_frame = tk.Frame(self.root, bd=2, relief="groove")
 
         file_frame.grid_rowconfigure(1, weight=0)
         file_frame.grid_columnconfigure(0, weight=1)
 
-        lbl_serverFiles = tk.Label(file_frame, text="Files", font=("", 16))
+        lbl_serverFiles = tk.Label(file_frame, text="Server Files", font=("Segoe UI", 14, "bold"))
         lbl_serverFiles.grid(row=0, column=0, columnspan=2, pady=5)
 
         child_frame = tk.Frame(file_frame)
         child_frame.grid(row=1, column=0, sticky="nsew")
 
-        self.files_listBox = tk.Listbox(child_frame, height=5)
-        self.files_listBox.pack(side="left", fill="both", expand=True)
+        self.files_listBox = tk.Listbox(child_frame, height=7, selectmode=tk.SINGLE, selectborderwidth=2)
+        self.files_listBox.pack(side="left", fill="both", expand=True, padx=(10, 0))
 
         scrollbar = ttk.Scrollbar(child_frame, orient="vertical", style="Custom.Vertical.TScrollbar")
-        scrollbar.pack(side="right", fill="y")
+        scrollbar.pack(side="right", fill="y", padx=(0, 10))
 
         scrollbar.config(command=self.files_listBox.yview)
         self.files_listBox.config(yscrollcommand=scrollbar.set)
@@ -110,27 +111,27 @@ class FileTransferSystemGUI:
         self.download_btn = tk.Button(btn_frame, text="Download", command=self.fn_download_file)
         self.download_btn.grid(row=0, column=2, padx=10, pady=10)
 
-        file_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        file_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=15)
 
     ## ------------------------ CLIENT NAME FRAME -----------------------------
 
     def client_frame(self):
-        frame = tk.Frame(self.root)
+        frame = tk.Frame(self.root, bd=2, relief="groove")
 
         frame.grid_rowconfigure(1, weight=0)
         frame.grid_columnconfigure(0, weight=1)
 
-        lbl_connected_clients = tk.Label(frame, text="Peer Clients", font=("", 16))
+        lbl_connected_clients = tk.Label(frame, text="Connected Clients", font=("", 14, "bold"))
         lbl_connected_clients.grid(row=0, column=0, pady=5)
 
         child_frame = tk.Frame(frame)
         child_frame.grid(row=1, column=0, sticky="nsew")
 
-        self.clients_listBox = tk.Listbox(child_frame, height=5)
-        self.clients_listBox.pack(side="left", fill="both", expand=True)
+        self.clients_listBox = tk.Listbox(child_frame, height=7, selectmode=tk.SINGLE, selectborderwidth=2)
+        self.clients_listBox.pack(side="left", fill="both", expand=True, padx=(10, 0))
 
         scrollbar = ttk.Scrollbar(child_frame, orient="vertical", style="Custom.Vertical.TScrollbar")
-        scrollbar.pack(side="right", fill="y")
+        scrollbar.pack(side="right", fill="y", padx=(0, 10))
 
         scrollbar.config(command=self.clients_listBox.yview)
         self.clients_listBox.config(yscrollcommand=scrollbar.set)
@@ -141,7 +142,7 @@ class FileTransferSystemGUI:
         self.send_file_to_client_btn = tk.Button(btn_frame, text="Send File", command=self.fn_send_client_file)
         self.send_file_to_client_btn.grid(row=0, column=0, padx=10, pady=10)
 
-        frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
+        frame.grid(row=1, column=1, sticky="nsew", padx=15, pady=15)
 
     ## ========================= Helpers ==============================
 
@@ -208,6 +209,7 @@ class FileTransferSystemGUI:
         try:
             if self.sock and self.client_id:
                 self._sync_inbox_once()
+                
         except Exception:
             # Keep GUI responsive even if one sync tick fails.
             pass

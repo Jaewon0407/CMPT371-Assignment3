@@ -160,7 +160,7 @@ def safe_list_files(root):
     files = []
     with os.scandir(root) as it:
         for entry in it:
-            if not entry.is_file():
+            if not entry.is_file() or entry.name.startswith("."):
                 continue
             if entry.name.endswith(".part"):
                 continue
@@ -265,10 +265,8 @@ def client_thread(conn, addr, shared_root, clients_root):
 
                 # LIST_CLIENTS: Get list of all other connected clients
                 elif req_type == "LIST_CLIENTS":
-                    lst = []
-                    for client in os.listdir(clients_root):
-                        if os.path.isdir(os.path.join(clients_root, client)) and conn_client_id != client:
-                            lst.append(client)
+                    with lock:
+                        lst = [c for c in active_clients if c != conn_client_id]
                             
                     send_json(conn, {"type": "OK", "request_id": request_id, "clients": lst})
 
